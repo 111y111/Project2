@@ -1,0 +1,822 @@
+######################################################################
+# 0) เตรียมระบบครั้งเดียว
+#    - seed หมวดประเมิน (8 หมวด), กิจกรรม (1–46), เกณฑ์ Major/Minor และ Advice ตัวอย่าง
+#    - ถ้า seed แล้วซ้ำ จะตอบ {"message":"Already seeded"}
+######################################################################
+POST http://127.0.0.1:8000/seed/master
+
+
+
+
+
+
+######################################################################
+# 1) ลงทะเบียนผู้ใช้ 2 คน
+#    แนวคิด: ให้ DB สร้าง user_id อัตโนมัติ → เราจะใช้ user_id=1 (เคสผ่าน),
+#            user_id=2 (เคสไม่ผ่าน) ในขั้นตอนต่อไป
+######################################################################
+
+
+# 1.1 ผู้ใช้ 1 — เคสที่จะ “ผ่านเกณฑ์”
+POST http://127.0.0.1:8000/personals
+Content-Type: application/json
+
+
+{
+  "name": "สมชัย",
+  "surname": "ประเสริฐ",
+  "phone_number": "0812345678",
+  "user_type": "Individual",
+  "idcard_file": "uploads/idcard_001.jpg",
+  "birth": "1985-07-15",
+  "religion": "พุทธ",
+  "id_number": "1234567890123",
+  "village_name": "บ้านหนองสำโรง",
+  "house_number": "45/1",
+  "road": "มิตรภาพ",
+  "alley": "ซอย 5",
+  "province": "นครราชสีมา",
+  "district": "เมือง",
+  "subdistrict": "ในเมือง"
+}
+
+
+###
+# 1.2 ผู้ใช้ 2 — เคส “ไม่ครบ/ไม่ผ่าน”
+POST http://127.0.0.1:8000/personals
+Content-Type: application/json
+
+
+{
+  "name": "สุดารัตน์",
+  "surname": "กิตติคุณ",
+  "phone_number": "0899876543",
+  "user_type": "Group",
+  "idcard_file": "uploads/idcard_002.jpg",
+  "birth": "1990-11-02",
+  "religion": "คริสต์",
+  "id_number": "9876543210987",
+  "village_name": "บ้านท่าเรือ",
+  "house_number": "12",
+  "road": "ราชดำเนิน",
+  "alley": "ซอย 2",
+  "province": "เชียงใหม่",
+  "district": "เมือง",
+  "subdistrict": "พระสิง"
+}
+
+
+###
+# 1.3 ดูรายชื่อย่อ (เอาไว้จด user_id ที่ระบบสร้างให้)
+GET http://127.0.0.1:8000/personals
+
+
+
+
+
+
+######################################################################
+# 2) สร้าง “ฟาร์ม” และ “ข้อมูลทุเรียน”
+#    เหตุผล: ก่อนยื่น GAP จำเป็นต้องมีข้อมูลฟาร์ม+ทุเรียนของ user
+######################################################################
+
+
+# 2.1 ฟาร์มของผู้ใช้ 1
+POST http://127.0.0.1:8000/farms
+Content-Type: application/json
+
+
+{
+  "user_id": "1",
+  "location": "https://www.google.com/maps?q=14.973211,102.084327",
+  "titledeed_num": "TD-1001",
+  "titledeed_file": "uploads/deed_1001.pdf"
+}
+
+
+###
+# 2.2 ข้อมูลทุเรียนของผู้ใช้ 1
+POST http://127.0.0.1:8000/durians
+Content-Type: application/json
+
+
+{
+  "user_id": "1",
+  "durian_type": "หมอนทอง",
+  "durian_age": 5,
+  "tree_count": 20,
+  "flowering_startdate": "2025-03-15",
+  "harvest_month": "มิถุนายน",
+  "weight_expected": 1500.5
+}
+
+
+###
+# (ออปชัน) ฟาร์ม/ทุเรียนของผู้ใช้ 2 — เพื่อให้เล่นครบฟีเจอร์
+POST http://127.0.0.1:8000/farms
+Content-Type: application/json
+
+
+{
+  "user_id": "2",
+  "location": "https://www.google.com/maps?q=18.789001,98.992522",
+  "titledeed_num": "TD-1002",
+  "titledeed_file": "uploads/deed_1002.pdf"
+}
+
+
+###
+POST http://127.0.0.1:8000/durians
+Content-Type: application/json
+
+
+{
+  "user_id": "2",
+  "durian_type": "ชะนี",
+  "durian_age": 3,
+  "tree_count": 10,
+  "flowering_startdate": "2025-04-01",
+  "harvest_month": "กรกฎาคม",
+  "weight_expected": 800.0
+}
+
+
+
+
+
+
+######################################################################
+# 3) ผู้ใช้ดู “สิ่งที่ต้องตอบ” (หมวด, กิจกรรม) + การค้นหาแบบหลายเงื่อนไข
+#    - ใช้เพื่อแสดงรายการคำถาม/กิจกรรมทั้งหมดในฟรอนต์เอนด์
+######################################################################
+GET http://127.0.0.1:8000/categories
+
+
+###
+GET http://127.0.0.1:8000/activities
+
+
+###
+# ตัวอย่างค้นหา: หมวด 1,2,3 + ทั้ง Major/Minor + มีคำว่า "บำบัด"
+POST http://127.0.0.1:8000/activities/search
+Content-Type: application/json
+
+
+{
+  "categoryapp_ids": [1, 2, 3],
+  "activity_types": ["Major", "Minor"],
+  "keyword": "บำบัด"
+}
+
+
+
+
+
+
+######################################################################
+# 4) ผู้ใช้ 1 กรอกคำตอบครบ 46 ข้อ
+#    โฟกัส: “กรอกให้ครบก่อน” → เพื่อให้แอดมิน “ให้คะแนน” ต่อได้
+#    (สามารถแนบไฟล์/กรอกข้อความได้ตามฟิลด์ answer_file/answer_text)
+######################################################################
+
+
+### ===== หมวด 1: การจัดการน้ำ (1–7) =====
+POST http://127.0.0.1:8000/answers
+Content-Type: application/json
+
+
+{ "activity_id": 1, "user_id": "1", "answer_text": "ลำธาร" }
+
+
+###
+POST http://127.0.0.1:8000/answers
+Content-Type: application/json
+
+
+{ "activity_id": 2, "user_id": "1", "answer_file": "water_source.jpg" }
+
+
+###
+POST http://127.0.0.1:8000/answers
+Content-Type: application/json
+
+
+{ "activity_id": 3, "user_id": "1", "answer_text": "ผ่านการบำบัดคลอรีน" }
+
+
+###
+POST http://127.0.0.1:8000/answers
+Content-Type: application/json
+
+
+{ "activity_id": 4, "user_id": "1", "answer_file": "treatment.jpg" }
+
+
+###
+POST http://127.0.0.1:8000/answers
+Content-Type: application/json
+
+
+{ "activity_id": 5, "user_id": "1", "answer_text": "น้ำบาดาล" }
+
+
+###
+POST http://127.0.0.1:8000/answers
+Content-Type: application/json
+
+
+{ "activity_id": 6, "user_id": "1", "answer_text": "มี เก็บตัวอย่างช่วงเริ่มผลิต" }
+
+
+###
+POST http://127.0.0.1:8000/answers
+Content-Type: application/json
+
+
+{ "activity_id": 7, "user_id": "1", "answer_text": "บ่อดักตะกอน + สระพัก" }
+
+
+### ===== หมวด 2: การจัดการที่ดิน (8–15) =====
+POST http://127.0.0.1:8000/answers
+Content-Type: application/json
+
+
+{ "activity_id": 8, "user_id": "1", "answer_text": "ไม่เสี่ยง" }
+
+
+###
+POST http://127.0.0.1:8000/answers
+Content-Type: application/json
+
+
+{ "activity_id": 9, "user_id": "1", "answer_text": "มีบำบัดจนปลอดภัย" }
+
+
+###
+POST http://127.0.0.1:8000/answers
+Content-Type: application/json
+
+
+{ "activity_id": 10, "user_id": "1", "answer_text": "ปฏิบัติตามกฎหมาย" }
+
+
+###
+POST http://127.0.0.1:8000/answers
+Content-Type: application/json
+
+
+{ "activity_id": 11, "user_id": "1", "answer_text": "บันทึกสารเคมีครบถ้วน" }
+
+
+###
+POST http://127.0.0.1:8000/answers
+Content-Type: application/json
+
+
+{ "activity_id": 12, "user_id": "1", "answer_file": "soil_test.pdf" }
+
+
+###
+POST http://127.0.0.1:8000/answers
+Content-Type: application/json
+
+
+{ "activity_id": 13, "user_id": "1", "answer_text": "มีมาตรการป้องกันผลกระทบสิ่งแวดล้อม" }
+
+
+###
+POST http://127.0.0.1:8000/answers
+Content-Type: application/json
+
+
+{ "activity_id": 14, "user_id": "1", "answer_file": "plot.jpg", "answer_text": "ผังแปลงคำนึงถึงสิ่งแวดล้อม" }
+
+
+###
+POST http://127.0.0.1:8000/answers
+Content-Type: application/json
+
+
+{ "activity_id": 15, "user_id": "1", "answer_text": "มีรหัสแปลงและข้อมูลประจำแปลงครบ" }
+
+
+### ===== หมวด 3: การใช้ปุ๋ยและยา (16–21) =====
+POST http://127.0.0.1:8000/answers
+Content-Type: application/json
+
+
+{ "activity_id": 16, "user_id": "1", "answer_text": "ไม่ใช้สิ่งขับถ่ายของคน" }
+
+
+###
+POST http://127.0.0.1:8000/answers
+Content-Type: application/json
+
+
+{ "activity_id": 17, "user_id": "1", "answer_text": "ทำตามฉลากและหยุดก่อนเก็บเกี่ยว" }
+
+
+###
+POST http://127.0.0.1:8000/answers
+Content-Type: application/json
+
+
+{ "activity_id": 18, "user_id": "1", "answer_text": "ไม่มีตกค้างเกินมาตรฐาน" }
+
+
+###
+POST http://127.0.0.1:8000/answers
+Content-Type: application/json
+
+
+{ "activity_id": 19, "user_id": "1", "answer_text": "ไม่ใช้วัตถุอันตรายต้องห้าม" }
+
+
+###
+POST http://127.0.0.1:8000/answers
+Content-Type: application/json
+
+
+{ "activity_id": 20, "user_id": "1", "answer_text": "ปฏิบัติตามข้อกำหนดประเทศคู่ค้า" }
+
+
+###
+POST http://127.0.0.1:8000/answers
+Content-Type: application/json
+
+
+{ "activity_id": 21, "user_id": "1", "answer_text": "ใช้ปุ๋ย/ปรับปรุงดินที่ขึ้นทะเบียน" }
+
+
+### ===== หมวด 4: ยานพาหนะและอุปกรณ์ (22–26) =====
+POST http://127.0.0.1:8000/answers
+Content-Type: application/json
+
+
+{ "activity_id": 22, "user_id": "1", "answer_text": "วัสดุสัมผัสผลผลิตไม่ปนเปื้อน" }
+
+
+###
+POST http://127.0.0.1:8000/answers
+Content-Type: application/json
+
+
+{ "activity_id": 23, "user_id": "1", "answer_text": "ล้างอุปกรณ์ทุกครั้ง จัดการน้ำล้างถูกต้อง" }
+
+
+###
+POST http://127.0.0.1:8000/answers
+Content-Type: application/json
+
+
+{ "activity_id": 24, "user_id": "1", "answer_text": "แยกภาชนะของเสียออกจากเก็บเกี่ยว" }
+
+
+###
+POST http://127.0.0.1:8000/answers
+Content-Type: application/json
+
+
+{ "activity_id": 25, "user_id": "1", "answer_file": "calibration.pdf" }
+
+
+###
+POST http://127.0.0.1:8000/answers
+Content-Type: application/json
+
+
+{ "activity_id": 26, "user_id": "1", "answer_text": "มีสิ่งอำนวยความสะดวกสุขลักษณะเพียงพอ" }
+
+
+### ===== หมวด 5: การเก็บเกี่ยว (27–30) =====
+POST http://127.0.0.1:8000/answers
+Content-Type: application/json
+
+
+{ "activity_id": 27, "user_id": "1", "answer_text": "เก็บเกี่ยวอายุเหมาะสม/ตามข้อกำหนด" }
+
+
+###
+POST http://127.0.0.1:8000/answers
+Content-Type: application/json
+
+
+{ "activity_id": 28, "user_id": "1", "answer_text": "คัดแยกสินค้าที่ไม่ได้คุณภาพก่อนส่ง" }
+
+
+###
+POST http://127.0.0.1:8000/answers
+Content-Type: application/json
+
+
+{ "activity_id": 29, "user_id": "1", "answer_text": "มีวิธีป้องกันการเสื่อมคุณภาพ" }
+
+
+###
+POST http://127.0.0.1:8000/answers
+Content-Type: application/json
+
+
+{ "activity_id": 30, "user_id": "1", "answer_text": "มีการดูแลก่อนขนส่ง" }
+
+
+### ===== หมวด 6: การพักผลผลิต (31) =====
+POST http://127.0.0.1:8000/answers
+Content-Type: application/json
+
+
+{ "activity_id": 31, "user_id": "1", "answer_text": "ไม่วางสัมผัสพื้นดินโดยตรง" }
+
+
+### ===== หมวด 7: สถานที่ต่างๆ (32–38) =====
+POST http://127.0.0.1:8000/answers
+Content-Type: application/json
+
+
+{ "activity_id": 32, "user_id": "1", "answer_text": "มีที่เก็บสารเคมีเฉพาะ แยกชัดเจน" }
+
+
+###
+POST http://127.0.0.1:8000/answers
+Content-Type: application/json
+
+
+{ "activity_id": 33, "user_id": "1", "answer_text": "ปิดฝาสนิท/ติดฉลากครบ" }
+
+
+###
+POST http://127.0.0.1:8000/answers
+Content-Type: application/json
+
+
+{ "activity_id": 34, "user_id": "1", "answer_text": "กำจัดภาชนะถูกต้อง" }
+
+
+###
+POST http://127.0.0.1:8000/answers
+Content-Type: application/json
+
+
+{ "activity_id": 35, "user_id": "1", "answer_text": "แยกภาชนะ/ป้องกันสัตว์พาหะ" }
+
+
+###
+POST http://127.0.0.1:8000/answers
+Content-Type: application/json
+
+
+{ "activity_id": 36, "user_id": "1", "answer_text": "มีมาตรการป้องกันสัตว์เลี้ยง" }
+
+
+###
+POST http://127.0.0.1:8000/answers
+Content-Type: application/json
+
+
+{ "activity_id": 37, "user_id": "1", "answer_text": "พื้นที่หมัก/จัดการปุ๋ยเป็นสัดส่วน" }
+
+
+###
+POST http://127.0.0.1:8000/answers
+Content-Type: application/json
+
+
+{ "activity_id": 38, "user_id": "1", "answer_text": "สถานที่พัก/ขนย้าย/เก็บรักษา สุขลักษณะดี" }
+
+
+### ===== หมวด 8: ผู้ปฏิบัติงาน (39–46) =====
+POST http://127.0.0.1:8000/answers
+Content-Type: application/json
+
+
+{ "activity_id": 39, "user_id": "1", "answer_text": "จัดการสุขลักษณะป้องกันปนเปื้อน" }
+
+
+###
+POST http://127.0.0.1:8000/answers
+Content-Type: application/json
+
+
+{ "activity_id": 40, "user_id": "1", "answer_text": "ผู้สัมผัสผลผลิตดูแลสุขลักษณะ" }
+
+
+###
+POST http://127.0.0.1:8000/answers
+Content-Type: application/json
+
+
+{ "activity_id": 41, "user_id": "1", "answer_text": "มีความรู้สารเคมีและวิธีใช้" }
+
+
+###
+POST http://127.0.0.1:8000/answers
+Content-Type: application/json
+
+
+{ "activity_id": 42, "user_id": "1", "answer_file": "health_check.pdf" }
+
+
+###
+POST http://127.0.0.1:8000/answers
+Content-Type: application/json
+
+
+{ "activity_id": 43, "user_id": "1", "answer_text": "รู้สุขลักษณะส่วนบุคคล" }
+
+
+###
+POST http://127.0.0.1:8000/answers
+Content-Type: application/json
+
+
+{ "activity_id": 44, "user_id": "1", "answer_text": "รู้การปฐมพยาบาลเบื้องต้น" }
+
+
+###
+POST http://127.0.0.1:8000/answers
+Content-Type: application/json
+
+
+{ "activity_id": 45, "user_id": "1", "answer_text": "สวมอุปกรณ์ป้องกันครบ" }
+
+
+###
+POST http://127.0.0.1:8000/answers
+Content-Type: application/json
+
+
+{ "activity_id": 46, "user_id": "1", "answer_text": "อาบน้ำเปลี่ยนเสื้อผ้าหลังฉีดพ่น" }
+
+
+###
+# 4.สรุป: เช็คว่าผู้ใช้ 1 “ตอบครบ” แล้วหรือยัง (answered/scored per activity)
+GET http://127.0.0.1:8000/activities/with-status?user_id=1
+
+
+
+
+
+
+######################################################################
+# 5) แอดมิน “ให้คะแนน” แบบชุด (0/1)
+#    - กลไกป้องกัน: ถ้าส่ง activity_id ที่ยัง “ไม่มีคำตอบ” จะ error
+#    - ให้ครบทุกข้อเพื่อพร้อมประเมิน
+######################################################################
+PATCH http://127.0.0.1:8000/answers/score/1
+Content-Type: application/json
+
+
+[
+  {"activity_id":1, "user_id":"1", "result_each":1},
+  {"activity_id":2, "user_id":"1", "result_each":1},
+  {"activity_id":3, "user_id":"1", "result_each":1},
+  {"activity_id":4, "user_id":"1", "result_each":1},
+  {"activity_id":5, "user_id":"1", "result_each":1},
+  {"activity_id":6, "user_id":"1", "result_each":0},
+  {"activity_id":7, "user_id":"1", "result_each":1},
+
+
+  {"activity_id":8, "user_id":"1", "result_each":1},
+  {"activity_id":9, "user_id":"1", "result_each":1},
+  {"activity_id":10, "user_id":"1", "result_each":1},
+  {"activity_id":11, "user_id":"1", "result_each":1},
+  {"activity_id":12, "user_id":"1", "result_each":1},
+  {"activity_id":13, "user_id":"1", "result_each":1},
+  {"activity_id":14, "user_id":"1", "result_each":1},
+  {"activity_id":15, "user_id":"1", "result_each":1},
+
+
+  {"activity_id":16, "user_id":"1", "result_each":1},
+  {"activity_id":17, "user_id":"1", "result_each":1},
+  {"activity_id":18, "user_id":"1", "result_each":1},
+  {"activity_id":19, "user_id":"1", "result_each":1},
+  {"activity_id":20, "user_id":"1", "result_each":1},
+  {"activity_id":21, "user_id":"1", "result_each":1},
+
+
+  {"activity_id":22, "user_id":"1", "result_each":1},
+  {"activity_id":23, "user_id":"1", "result_each":1},
+  {"activity_id":24, "user_id":"1", "result_each":1},
+  {"activity_id":25, "user_id":"1", "result_each":1},
+  {"activity_id":26, "user_id":"1", "result_each":1},
+
+
+  {"activity_id":27, "user_id":"1", "result_each":1},
+  {"activity_id":28, "user_id":"1", "result_each":1},
+  {"activity_id":29, "user_id":"1", "result_each":1},
+  {"activity_id":30, "user_id":"1", "result_each":1},
+
+
+  {"activity_id":31, "user_id":"1", "result_each":1},
+
+
+  {"activity_id":32, "user_id":"1", "result_each":1},
+  {"activity_id":33, "user_id":"1", "result_each":1},
+  {"activity_id":34, "user_id":"1", "result_each":1},
+  {"activity_id":35, "user_id":"1", "result_each":1},
+  {"activity_id":36, "user_id":"1", "result_each":1},
+  {"activity_id":37, "user_id":"1", "result_each":1},
+  {"activity_id":38, "user_id":"1", "result_each":1},
+
+
+  {"activity_id":39, "user_id":"1", "result_each":1},
+  {"activity_id":40, "user_id":"1", "result_each":1},
+  {"activity_id":41, "user_id":"1", "result_each":1},
+  {"activity_id":42, "user_id":"1", "result_each":1},
+  {"activity_id":43, "user_id":"1", "result_each":1},
+  {"activity_id":44, "user_id":"1", "result_each":1},
+  {"activity_id":45, "user_id":"1", "result_each":1},
+  {"activity_id":46, "user_id":"1", "result_each":1}
+]
+
+
+###
+# 5.สรุป: ดูสถานะ answered/scored อีกที (ควร scored=true ครบ)
+GET http://127.0.0.1:8000/activities/with-status?user_id=1
+
+
+
+
+
+
+######################################################################
+# 6) ประเมินผลรวมทั้งชุด
+#    - ถ้า Major รายหมวดผ่านตามเกณฑ์ + Minor รวม ≥ 16 → eligible_for_request=true
+######################################################################
+GET http://127.0.0.1:8000/assessment/evaluate?user_id=1
+
+
+
+
+
+
+######################################################################
+# 7) ข้อตกลง → ผู้ใช้ยอมรับ → แอดมินสร้าง GAP Request → ตรวจ → ออกเกียรติบัตร
+#    คีย์ไอเดีย:
+#    - ผู้ใช้ “ต้องยอมรับทุกข้อตกลง” ก่อน
+#    - “แอดมิน” เป็นคนสร้าง GAP Request (ไม่ใช่ผู้ใช้)
+#    - ใช้ PATCH /gap-requests/status/{id} เพื่ออัปเดตสถานะในไทม์ไลน์
+######################################################################
+
+
+# 7.1 แอดมินสร้างข้อตกลง 2 ฉบับ (เนื้อหาตัวอย่าง)
+POST http://127.0.0.1:8000/agreements
+Content-Type: application/json
+
+
+{ "agreement_text": "ผู้ใช้ยอมรับว่าจะปฏิบัติตามมาตรฐาน GAP" }
+
+
+###
+POST http://127.0.0.1:8000/agreements
+Content-Type: application/json
+
+
+{ "agreement_text": "ข้อมูลทั้งหมดต้องเป็นความจริง" }
+
+
+###
+# 7.2 ผู้ใช้ 1 กดยอมรับ “ครบทุกฉบับ”
+POST http://127.0.0.1:8000/agreement-answers
+Content-Type: application/json
+
+
+{ "agreement_id": 1, "user_id": "1", "agreement_answer": "ยอมรับ" }
+
+
+###
+POST http://127.0.0.1:8000/agreement-answers
+Content-Type: application/json
+
+
+{ "agreement_id": 2, "user_id": "1", "agreement_answer": "ยอมรับ" }
+
+
+###
+# 7.3 แอดมินสร้าง GAP Request ให้ผู้ใช้ 1
+#     - ต้องผ่านเงื่อนไข: ประเมินผ่าน + มีข้อมูล Durian + ยอมรับข้อตกลงครบ
+#     - ตั้งสถานะแรกเป็น “รอจัดผู้ตรวจสอบ”
+POST http://127.0.0.1:8000/gap-requests?user_id=1
+Content-Type: application/json
+
+
+{
+  "farm_id": 1,
+  "request_date": "2025-05-01",
+  "timeline_status": "รอจัดผู้ตรวจสอบ"
+}
+
+
+###
+# 7.4 ผู้ใช้ตรวจสอบสถานะคำขอของตัวเอง
+GET http://127.0.0.1:8000/gap-requests/by-user/1
+
+
+###
+# 7.5 แอดมินอัปเดตสถานะ: เริ่มเข้าสู่กระบวนการตรวจ (“อยู่ระหว่างตรวจ”)
+PATCH http://127.0.0.1:8000/gap-requests/status/1?timeline_status=อยู่ระหว่างตรวจ
+
+
+###
+# 7.6 ลงผลตรวจ (เมื่อมีผู้ตรวจแล้ว)
+#     - ข้อมูลนี้อ้างอิงกับ GAP Request เดิม (request_id = 1)
+POST http://127.0.0.1:8000/inspections
+Content-Type: application/json
+
+
+{
+  "request_id": 1,
+  "complete_date": "2025-05-15",
+  "status_result": "ผ่าน"
+}
+
+
+###
+# 7.7 อัปเดตสถานะหลังตรวจเสร็จ
+PATCH http://127.0.0.1:8000/gap-requests/status/1?timeline_status=ตรวจเสร็จ
+
+
+###
+# 7.8 ถ้าผลตรวจ “ผ่าน” → แอดมินออกเกียรติบัตร
+POST http://127.0.0.1:8000/certifications
+Content-Type: application/json
+
+
+{
+  "request_id": 1,
+  "farm_id": 1,
+  "issue_date": "2025-05-20",
+  "expire_date": "2026-05-20",
+  "cert_file": "cert_F001.pdf",
+  "addition": "ต้องตรวจติดตามปีถัดไป"
+}
+
+
+###
+# 7.9 อัปเดตสถานะสรุปสุดท้าย — “ออกเกียรติบัตรแล้ว”
+PATCH http://127.0.0.1:8000/gap-requests/status/1?timeline_status=ออกเกียรติบัตรแล้ว
+
+
+###
+# 7.สรุป: ผู้ใช้ดูไทม์ไลน์/สถานะทั้งหมดของตัวเอง
+GET http://127.0.0.1:8000/gap-requests/by-user/1
+
+
+
+
+
+
+######################################################################
+# 8) เคสไม่ครบ/ไม่ผ่าน — ผู้ใช้ 2
+#    เดโม: ตอบไม่ครบ → แอดมินให้คะแนนเฉพาะที่ตอบ → ประเมินจะได้ incomplete
+######################################################################
+
+
+# 8.1 ผู้ใช้ 2 ตอบเพียง 3 ข้อแรก (หมวดน้ำ)
+POST http://127.0.0.1:8000/answers
+Content-Type: application/json
+
+
+{ "activity_id": 1, "user_id": "2", "answer_text": "ลำธาร" }
+
+
+###
+POST http://127.0.0.1:8000/answers
+Content-Type: application/json
+
+
+{ "activity_id": 2, "user_id": "2", "answer_text": "", "answer_file": "no_photo.jpg" }
+
+
+###
+POST http://127.0.0.1:8000/answers
+Content-Type: application/json
+
+
+{ "activity_id": 3, "user_id": "2", "answer_text": "ไม่ได้บำบัด" }
+
+
+###
+# 8.2 แอดมินตรวจสถานะ ควรเห็น answered เฉพาะ 1–3
+GET http://127.0.0.1:8000/activities/with-status?user_id=2
+
+
+###
+# 8.3 แอดมินให้คะแนนเท่าที่ตอบ (ถ้าส่ง id ที่ยังไม่ตอบ ระบบจะไม่ยอม)
+PATCH http://127.0.0.1:8000/answers/score/2
+Content-Type: application/json
+
+
+[
+  {"activity_id":1, "user_id":"2", "result_each":1},
+  {"activity_id":2, "user_id":"2", "result_each":0},
+  {"activity_id":3, "user_id":"2", "result_each":0}
+]
+
+
+###
+# 8.สรุป: ประเมิน → จะได้ status=incomplete และบอกหมวด/ข้อที่ยังขาด
+GET http://127.0.0.1:8000/assessment/evaluate?user_id=2
+
+
+
